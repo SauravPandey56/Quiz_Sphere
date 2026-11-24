@@ -64,14 +64,13 @@ const Landing = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#EEF2FF] text-slate-800 font-sans selection:bg-indigo-200 selection:text-indigo-900 overflow-hidden relative flex flex-col">
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] font-sans selection:bg-[var(--primary)]/20 selection:text-[var(--primary)] overflow-hidden relative flex flex-col transition-colors duration-300">
       
       {/* Animated Soft Gradient Mesh Background */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[70%] bg-purple-200/50 rounded-full blur-[120px] mix-blend-multiply opacity-70 animate-pulse"></div>
-        <div className="absolute top-[30%] right-[0%] w-[40%] h-[60%] bg-[#C7D2FE]/60 rounded-full blur-[140px] mix-blend-multiply opacity-60"></div>
-        <div className="absolute bottom-[-10%] left-[20%] w-[60%] h-[50%] bg-[#E0E7FF]/80 rounded-full blur-[100px] mix-blend-multiply opacity-80"></div>
-        <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px]"></div>
+        <div className="absolute -top-[20%] -left-[10%] w-[50%] h-[70%] bg-[var(--primary)]/10 rounded-full blur-[140px] pointer-events-none"></div>
+        <div className="absolute top-[30%] right-[0%] w-[40%] h-[60%] bg-[#4F8CFF]/10 rounded-full blur-[140px] pointer-events-none"></div>
+        <div className="absolute bottom-[-10%] left-[20%] w-[60%] h-[50%] bg-[var(--primary)]/5 rounded-full blur-[120px] pointer-events-none"></div>
       </div>
 
       {/* Navigation Layer */}
@@ -154,19 +153,16 @@ const Landing = () => {
 
             {/* Right Side: Login Card */}
             <div className={`lg:w-[45%] lg:max-w-md w-full transition-all duration-1000 delay-500 ${mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
-               <div className="bg-white/80 backdrop-blur-xl border border-white shadow-[0_8px_30px_rgba(0,0,0,0.04)] rounded-[2rem] p-8 lg:p-10 relative overflow-hidden">
-                 
-                 {/* Soft internal glow for glassmorphism */}
-                 <div className="absolute inset-0 bg-gradient-to-br from-white/90 to-white/40 z-0"></div>
+               <div className="bg-[var(--surface)] border border-[var(--border)] shadow-[var(--shadow)] rounded-[2rem] p-8 lg:p-10 relative overflow-hidden">
                  
                  <div className="relative z-10">
                    <div className="mb-8">
-                     <h2 className="text-2xl font-bold text-slate-900 tracking-tight">Sign in to workspace</h2>
-                     <p className="text-sm text-slate-500 mt-1 font-medium">Access your exams and dashboards.</p>
+                     <h2 className="text-2xl font-bold text-[var(--text)] tracking-tight font-heading">Sign in to workspace</h2>
+                     <p className="text-sm text-[var(--muted)] mt-1 font-medium">Access your exams and dashboards.</p>
                    </div>
 
                    {error && (
-                     <div className="bg-red-50 border border-red-100 text-red-600 px-4 py-3 rounded-xl mb-6 text-sm font-semibold flex items-center">
+                     <div className="bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-3 rounded-xl mb-6 text-sm font-semibold flex items-center">
                        {error}
                      </div>
                    )}
@@ -174,14 +170,14 @@ const Landing = () => {
                    <form onSubmit={handleLogin} className="space-y-4">
                      
                      <div className="space-y-1">
-                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider pl-1">Email Address</label>
-                       <div className="relative flex items-center bg-white border border-slate-200 hover:border-indigo-300 rounded-xl overflow-hidden transition-all duration-300 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 shadow-sm">
-                          <div className="pl-4 pr-2 text-slate-400">
+                       <label className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider pl-1">Email Address</label>
+                       <div className="relative flex items-center bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/50 rounded-xl overflow-hidden transition-all duration-300 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/15 shadow-sm">
+                          <div className="pl-4 pr-2 text-[var(--muted)]">
                             <Mail size={18} />
                           </div>
                           <input
                             type="email"
-                            className="w-full bg-transparent text-slate-800 px-2 py-3 outline-none text-sm font-medium placeholder-slate-400"
+                            className="w-full bg-transparent text-[var(--text)] px-2 py-3 outline-none text-sm font-medium placeholder:text-[var(--muted)]/60"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                             onFocus={() => setIsFocused('email')}
@@ -194,14 +190,14 @@ const Landing = () => {
                      </div>
 
                      <div className="space-y-1">
-                       <label className="text-xs font-bold text-slate-600 uppercase tracking-wider pl-1">Password</label>
-                       <div className="relative flex items-center bg-white border border-slate-200 hover:border-indigo-300 rounded-xl overflow-hidden transition-all duration-300 focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 shadow-sm">
-                          <div className="pl-4 pr-2 text-slate-400">
+                       <label className="text-xs font-bold text-[var(--muted)] uppercase tracking-wider pl-1">Password</label>
+                       <div className="relative flex items-center bg-[var(--surface-2)] border border-[var(--border)] hover:border-[var(--primary)]/50 rounded-xl overflow-hidden transition-all duration-300 focus-within:border-[var(--primary)] focus-within:ring-2 focus-within:ring-[var(--primary)]/15 shadow-sm">
+                          <div className="pl-4 pr-2 text-[var(--muted)]">
                             <Lock size={18} />
                           </div>
                           <input
                             type={showPassword ? "text" : "password"}
-                            className="w-full bg-transparent text-slate-800 px-2 py-3 outline-none text-sm font-medium placeholder-slate-400"
+                            className="w-full bg-transparent text-[var(--text)] px-2 py-3 outline-none text-sm font-medium placeholder:text-[var(--muted)]/60"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             onFocus={() => setIsFocused('password')}
@@ -212,7 +208,7 @@ const Landing = () => {
                           <button 
                             type="button" 
                             onClick={() => setShowPassword(!showPassword)}
-                            className="pr-4 text-slate-400 hover:text-indigo-600 focus:outline-none transition-colors"
+                            className="pr-4 text-[var(--muted)] hover:text-[var(--text)] focus:outline-none transition-colors"
                           >
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
@@ -220,28 +216,28 @@ const Landing = () => {
                      </div>
 
                      <div className="flex items-center justify-between pt-2 mb-2">
-                       <label className="flex items-center space-x-2 text-sm text-slate-600 cursor-pointer hover:text-slate-900 transition-colors">
+                       <label className="flex items-center space-x-2 text-sm text-[var(--muted)] cursor-pointer hover:text-[var(--text)] transition-colors">
                          <div className="relative flex items-center justify-center">
-                           <input type="checkbox" className="peer appearance-none w-4 h-4 border border-slate-300 rounded focus:ring-2 focus:ring-indigo-500/20 checked:bg-indigo-600 checked:border-indigo-600 transition-all cursor-pointer shadow-sm" />
+                           <input type="checkbox" className="peer appearance-none w-4 h-4 border border-[var(--border)] rounded focus:ring-2 focus:ring-[var(--primary)]/20 checked:bg-[var(--primary)] checked:border-[var(--primary)] transition-all cursor-pointer shadow-sm" />
                            <CheckCircle2 size={12} className="absolute text-white opacity-0 peer-checked:opacity-100 pointer-events-none" />
                          </div>
                          <span className="font-medium">Remember me</span>
                        </label>
-                       <a href="#" className="text-sm font-semibold text-indigo-600 hover:text-indigo-700 transition-colors">Forgot password?</a>
+                       <a href="#" className="text-sm font-semibold text-[var(--primary)] hover:underline transition-colors">Forgot password?</a>
                      </div>
 
                      <button
                        type="submit"
                        disabled={loading}
-                       className="w-full mt-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-indigo-600/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0 flex items-center justify-center"
+                       className="w-full mt-2 bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-bold py-3.5 px-4 rounded-xl shadow-lg shadow-[var(--primary)]/20 transition-all transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:hover:translate-y-0 flex items-center justify-center"
                      >
                        {loading ? <div className="w-5 h-5 rounded-full border-2 border-white border-t-transparent animate-spin"></div> : 'Sign In'}
                      </button>
                    </form>
 
-                   <div className="mt-8 text-center border-t border-slate-100 pt-6">
-                     <p className="text-sm font-medium text-slate-600">
-                       Don't have an account? <span onClick={() => navigate('/register')} className="text-indigo-600 font-bold hover:text-indigo-800 cursor-pointer transition-colors ml-1">Sign up here</span>
+                   <div className="mt-8 text-center border-t border-[var(--border)] pt-6">
+                     <p className="text-sm font-medium text-[var(--muted)]">
+                       Don't have an account? <span onClick={() => navigate('/register')} className="text-[var(--primary)] font-bold hover:underline cursor-pointer transition-colors ml-1">Sign up here</span>
                      </p>
                    </div>
                  </div>

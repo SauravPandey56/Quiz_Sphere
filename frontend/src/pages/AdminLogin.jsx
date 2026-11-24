@@ -24,34 +24,34 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
-      <div className="glass-panel-dark w-full max-w-md p-8 relative overflow-hidden border-slate-700">
+    <div className="min-h-screen flex items-center justify-center p-4 bg-[var(--bg)] text-[var(--text)] transition-colors duration-300">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl w-full max-w-md p-8 relative overflow-hidden shadow-[var(--shadow)]">
         
         <div className="relative z-10 flex flex-col items-center">
-          <ShieldCheck size={48} className="text-blue-500 mb-4" />
+          <ShieldCheck size={48} className="text-[var(--primary)] mb-4" />
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">Admin Portal</h1>
-            <p className="text-slate-400 text-sm">Secure Authentication Area</p>
+            <h1 className="text-3xl font-bold text-[var(--text)] mb-2 font-heading">Admin Portal</h1>
+            <p className="text-[var(--muted)] text-sm">Secure Authentication Area</p>
           </div>
 
-          {error && <div className="bg-red-500/20 border border-red-500 text-red-200 px-4 py-3 rounded mb-4 w-full text-center">{error}</div>}
+          {error && <div className="bg-rose-500/10 border border-rose-500/20 text-rose-500 px-4 py-3 rounded-xl mb-4 w-full text-center text-sm font-semibold">{error}</div>}
 
-          <form onSubmit={handleSubmit} className="space-y-6 w-full">
+          <form onSubmit={handleSubmit} className="space-y-5 w-full">
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Admin Email/Username</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">Admin Email/Username</label>
               <input
                 type="text"
-                className="w-full px-4 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm bg-slate-800/50 text-white"
+                className="w-full px-4 py-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 outline-none transition-all text-sm text-[var(--text)]"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-300 mb-1">Secret Password</label>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">Secret Password</label>
               <input
                 type="password"
-                className="w-full px-4 py-2 border border-slate-600 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm bg-slate-800/50 text-white"
+                className="w-full px-4 py-2.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 outline-none transition-all text-sm text-[var(--text)]"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -59,7 +59,7 @@ const AdminLogin = () => {
             </div>
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg shadow-md transition-all font-bold tracking-wider"
+              className="w-full bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-[var(--primary)]/20 transition-all tracking-wider text-sm mt-2"
             >
               AUTHENTICATE
             </button>

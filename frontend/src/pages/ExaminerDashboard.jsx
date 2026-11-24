@@ -12,6 +12,7 @@ import QuestionEditorModal from '../components/quiz/QuestionEditorModal';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
+import UserAvatar from '../components/common/UserAvatar';
 
 const ExaminerDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -215,9 +216,11 @@ const ExaminerDashboard = () => {
                <span className="text-sm font-bold text-slate-700 leading-tight">{user.name}</span>
                <span className="text-[10px] uppercase font-bold tracking-widest text-[#06B6D4]">Examiner</span>
              </div>
-             <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-400 text-white flex items-center justify-center font-bold shadow-md group-hover:scale-105 transition-transform">
-               {getAvatarInitials(user.name)}
-             </div>
+             <UserAvatar
+               src={user.profileImage}
+               name={user.name}
+               className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-cyan-400 text-white font-bold shadow-md group-hover:scale-105 transition-transform"
+             />
           </div>
         }
       />
@@ -746,9 +749,11 @@ const ExaminerDashboard = () => {
               <div className="bg-gradient-to-r from-indigo-700 to-purple-600 rounded-3xl p-8 shadow-2xl mb-8 relative overflow-hidden">
                  <div className="absolute top-[-50%] right-[-10%] w-[60%] h-[200%] bg-white/10 rotate-12 blur-2xl z-0 pointer-events-none"></div>
                  <div className="relative z-10 flex items-center">
-                    <div className="w-24 h-24 rounded-full border-4 border-white/20 bg-white/10 backdrop-blur-md flex items-center justify-center text-3xl font-black text-white shadow-xl">
-                      {getAvatarInitials(user.name)}
-                    </div>
+                    <UserAvatar
+                      src={user.profileImage}
+                      name={user.name}
+                      className="w-24 h-24 rounded-full border-4 border-white/20 bg-white/10 backdrop-blur-md text-3xl font-black text-white shadow-xl"
+                    />
                     <div className="ml-6 text-white">
                        <h1 className="text-3xl font-bold mb-1 tracking-tight">{user.name}</h1>
                        <div className="flex items-center space-x-3 text-white/80 text-sm font-medium">

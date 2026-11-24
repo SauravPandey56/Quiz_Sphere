@@ -44,6 +44,7 @@ app.use(cors({
     return callback(new Error('Origin is not allowed by CORS'));
   }
 }));
+app.use('/api/users/profile', express.json({ limit: '4mb' }));
 app.use(express.json({ limit: '100kb' }));
 app.use(morgan('dev'));
 

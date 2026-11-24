@@ -29,11 +29,11 @@ const DashboardLayout = ({ sidebar, children }) => {
 
   return (
     <DashboardContext.Provider value={{ isSidebarOpen, setIsSidebarOpen }}>
-      <div className="flex h-screen w-full bg-slate-50 overflow-hidden relative font-sans text-slate-800">
+      <div className="flex h-screen w-full bg-[var(--bg)] overflow-hidden relative font-sans text-[var(--text)]">
         
         {/* Mobile Overlay Background */}
         <div 
-          className={`fixed inset-0 z-40 bg-slate-900/60 backdrop-blur-sm md:hidden transition-opacity duration-300 pointer-events-auto ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+          className={`fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden transition-opacity duration-300 pointer-events-auto ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
           onClick={() => setIsSidebarOpen(false)}
           aria-hidden="true"
         />

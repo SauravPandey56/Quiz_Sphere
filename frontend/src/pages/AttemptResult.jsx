@@ -3,7 +3,7 @@ import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import { CheckCircle2, XCircle, AlertTriangle, ArrowRight, RefreshCw, Trophy, Clock, Award } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
-const COLORS = ['#4F46E5', '#EF4444', '#F59E0B'];
+const COLORS = ['#34D399', '#FB7185', '#FBBF24'];
 
 const AttemptResult = () => {
   const location = useLocation();
@@ -24,25 +24,25 @@ const AttemptResult = () => {
   ];
 
   return (
-    <div className="min-h-screen pt-12 pb-20 px-4 animate-fade-in bg-slate-50 relative overflow-hidden">
-      <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-indigo-500 rounded-full mix-blend-multiply filter blur-[150px] opacity-20 pointer-events-none z-0"></div>
-      <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#06B6D4] rounded-full mix-blend-multiply filter blur-[150px] opacity-20 pointer-events-none z-0"></div>
+    <div className="min-h-screen pt-12 pb-20 px-4 animate-fade-in bg-[var(--bg)] text-[var(--text)] relative overflow-hidden transition-colors duration-300">
+      <div className="absolute top-[-10%] right-[-5%] w-[40%] h-[40%] bg-[var(--primary)]/10 rounded-full filter blur-[150px] pointer-events-none z-0"></div>
+      <div className="absolute bottom-[-10%] left-[-10%] w-[50%] h-[50%] bg-[#4F8CFF]/5 rounded-full filter blur-[150px] pointer-events-none z-0"></div>
 
       <div className="max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-indigo-600 to-[#06B6D4] text-white mb-6 shadow-2xl shadow-indigo-500/30">
+          <div className="inline-flex items-center justify-center w-24 h-24 rounded-[2rem] bg-gradient-to-tr from-[var(--primary)] to-[#4F8CFF] text-white mb-6 shadow-2xl shadow-[var(--primary)]/30">
             <Trophy size={48} />
           </div>
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight mb-2">Examination Completed!</h1>
-          <p className="text-lg text-slate-500 font-medium">Your cryptographic execution payload has been successfully validated.</p>
+          <h1 className="text-4xl font-black text-[var(--text)] tracking-tight mb-2 font-heading">Examination Completed!</h1>
+          <p className="text-lg text-[var(--muted)] font-medium">Your examination responses have been successfully recorded and evaluated.</p>
         </div>
 
-        <div className="bg-white/70 backdrop-blur-xl p-8 md:p-12 mb-8 shadow-2xl rounded-[3rem] border border-white/50 relative overflow-hidden">
+        <div className="bg-[var(--surface)] border border-[var(--border)] p-8 md:p-12 mb-8 shadow-2xl rounded-[3rem] relative overflow-hidden">
           <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             
             {/* Left Graphing Metric */}
-            <div className="flex flex-col items-center justify-center p-10 bg-slate-50/80 rounded-[2.5rem] border border-slate-100 shadow-inner relative">
-               <h3 className="absolute top-6 left-8 font-bold text-slate-500 uppercase tracking-widest text-xs">Algorithmic Accuracy</h3>
+            <div className="flex flex-col items-center justify-center p-10 bg-[var(--surface-2)] rounded-[2.5rem] border border-[var(--border)] shadow-inner relative">
+               <h3 className="absolute top-6 left-8 font-bold text-[var(--muted)] uppercase tracking-widest text-xs">Accuracy Breakdown</h3>
                <div className="w-64 h-64 relative mt-4">
                   <ResponsiveContainer width="100%" height="100%">
                      <PieChart>
@@ -53,8 +53,8 @@ const AttemptResult = () => {
                      </PieChart>
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                     <span className="text-5xl font-black text-slate-800 tracking-tighter">{accuracy}%</span>
-                     <span className="text-xs font-bold text-slate-400 tracking-widest uppercase mt-2">Precision</span>
+                     <span className="text-5xl font-black text-[var(--text)] tracking-tighter">{accuracy}%</span>
+                     <span className="text-xs font-bold text-[var(--muted)] tracking-widest uppercase mt-2">Accuracy</span>
                   </div>
                </div>
                

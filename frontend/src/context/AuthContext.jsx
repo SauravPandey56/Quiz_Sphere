@@ -33,6 +33,26 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const updateUser = (updatedFields) => {
+    setUser((prev) => {
+      let existingToken = prev?.token;
+      if (!existingToken) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('userInfo') || '{}');
+          existingToken = stored?.token;
+        } catch {
+          existingToken = undefined;
+        }
+      }
+      const merged = { ...prev, ...updatedFields };
+      if (existingToken) {
+        merged.token = existingToken;
+      }
+      localStorage.setItem('userInfo', JSON.stringify(merged));
+      return merged;
+    });
+  };
+
   const logout = () => {
     setUser(null);
     localStorage.removeItem('userInfo');
@@ -40,7 +60,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, logout, updateUser, loading }}>
       {children}
     </AuthContext.Provider>
   );

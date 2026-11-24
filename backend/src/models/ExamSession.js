@@ -50,7 +50,11 @@ const examSessionSchema = new mongoose.Schema({
   responses: [responseSchema],
   totalCorrect: { type: Number, default: 0 },
   totalIncorrect: { type: Number, default: 0 },
-  totalNegativeMarks: { type: Number, default: 0 }
+  totalNegativeMarks: { type: Number, default: 0 },
+  // Monotonically-increasing client sequence counter used for concurrency control.
+  // The PATCH /save endpoint rejects writes where clientSeq <= autoSaveSeq,
+  // ensuring an older in-flight request can never overwrite a newer snapshot.
+  autoSaveSeq: { type: Number, default: 0 }
 }, { timestamps: true });
 
 export default mongoose.model('ExamSession', examSessionSchema);

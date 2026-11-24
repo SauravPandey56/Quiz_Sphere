@@ -14,6 +14,7 @@ import { AuthContext } from '../context/AuthContext';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
+import UserAvatar from '../components/common/UserAvatar';
 
 const AdminDashboard = () => {
   const { user } = useContext(AuthContext);
@@ -225,9 +226,11 @@ const AdminDashboard = () => {
                <span className="text-sm font-bold text-slate-700 leading-tight">{user.name}</span>
                <span className="text-[10px] uppercase font-bold tracking-widest text-indigo-600">Administrator</span>
              </div>
-             <div className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold border border-indigo-200 shadow-sm group-hover:scale-105 transition-transform">
-               {getAvatarInitials(user.name)}
-             </div>
+             <UserAvatar
+               src={user.profileImage}
+               name={user.name}
+               className="w-10 h-10 rounded-full bg-indigo-100 text-indigo-700 font-bold border border-indigo-200 shadow-sm group-hover:scale-105 transition-transform"
+             />
           </div>
         }
       />
@@ -315,15 +318,15 @@ const AdminDashboard = () => {
                           <AreaChart data={getLineData()}>
                             <defs>
                               <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#4F46E5" stopOpacity={0.3}/>
-                                <stop offset="95%" stopColor="#4F46E5" stopOpacity={0}/>
+                                <stop offset="5%" stopColor="#7C5CFF" stopOpacity={0.35}/>
+                                <stop offset="95%" stopColor="#7C5CFF" stopOpacity={0}/>
                               </linearGradient>
                             </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748B'}} />
-                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748B'}} />
-                            <Tooltip contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                            <Area type="monotone" dataKey="score" stroke="#4F46E5" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94A3B8'}} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#94A3B8'}} />
+                            <Tooltip contentStyle={{ borderRadius: '12px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', boxShadow: 'var(--shadow)' }} />
+                            <Area type="monotone" dataKey="score" stroke="#7C5CFF" strokeWidth={3} fillOpacity={1} fill="url(#colorScore)" />
                           </AreaChart>
                        </ResponsiveContainer>
                     </div>

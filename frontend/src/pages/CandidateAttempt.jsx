@@ -26,6 +26,12 @@ const CandidateAttempt = () => {
 
   // Refs
   const responsesRef = useRef({});
+  const savedResponsesRef = useRef({});
+  const saveTimeoutRef = useRef(null);
+  const saveSeqRef = useRef(0);
+  const retryTimeoutRef = useRef(null);
+  const retryCountRef = useRef(0);
+  const isSubmittingRef = useRef(false);
   const handlingViolationRef = useRef(false);
   const quizRef = useRef(null);
 
@@ -36,22 +42,40 @@ const CandidateAttempt = () => {
   useEffect(() => {
     const fetchAttemptData = async () => {
       try {
-        const { data: allAttempts } = await axios.get('/api/attempts');
-        const currentAttempt = allAttempts.find(a => a._id === attemptId);
+        const { data: currentAttempt } = await axios.get(`/api/attempts/${attemptId}`);
 
         if (!currentAttempt) throw new Error('Attempt not found');
-        if (currentAttempt.status === 'completed') {
+        if (currentAttempt.status === 'completed' || currentAttempt.sessionStatus === 'submitted' || currentAttempt.sessionStatus === 'auto_submitted') {
           navigate('/');
           return;
         }
 
-
-        const { data: quizData } = await axios.get('/api/quizzes');
-        const currentQuiz = quizData.quizzes.find(q => String(q.deploymentId || q._id) === String(currentAttempt.deploymentId));
+        const currentQuiz = currentAttempt.quiz;
+        if (!currentQuiz) throw new Error('Quiz details missing from attempt');
         setQuiz(currentQuiz);
 
-        const { data: qData } = await axios.get(`/api/quizzes/${currentAttempt.quizId}/questions`);
+        const targetQuizId = currentAttempt.quizId || currentQuiz.quizId || currentQuiz._id;
+        const { data: qData } = await axios.get(`/api/quizzes/${targetQuizId}/questions`);
         setQuestions(qData);
+
+        // Synchronize client sequence counter with persisted server autoSaveSeq
+        if (typeof currentAttempt.autoSaveSeq === 'number' && currentAttempt.autoSaveSeq > saveSeqRef.current) {
+          saveSeqRef.current = currentAttempt.autoSaveSeq;
+        }
+
+        // Restore previously saved responses if any
+        if (Array.isArray(currentAttempt.responses) && currentAttempt.responses.length > 0) {
+          const restored = {};
+          currentAttempt.responses.forEach(r => {
+            const qId = (r.question?._id || r.question || '').toString();
+            if (qId && r.selectedOption !== undefined && r.selectedOption !== '') {
+              restored[qId] = r.selectedOption;
+            }
+          });
+          setResponses(restored);
+          responsesRef.current = restored;
+          savedResponsesRef.current = { ...restored };
+        }
 
         const startTime = new Date(currentAttempt.startTime || currentAttempt.createdAt).getTime();
         const endTime = startTime + (currentQuiz.duration * 60 * 1000);
@@ -176,9 +200,11 @@ const CandidateAttempt = () => {
       }
     };
     const handleBeforeUnload = (e) => {
+      fireKeepaliveSave();
       e.preventDefault();
       e.returnValue = '';
     };
+    const handlePageHide = () => { fireKeepaliveSave(); };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('blur', handleBlur);
@@ -189,6 +215,7 @@ const CandidateAttempt = () => {
     document.addEventListener('paste', handleCopyPaste);
     document.addEventListener('keydown', handleKeyDown);
     window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('pagehide', handlePageHide);
 
     return () => {
       clearInterval(timer);
@@ -201,14 +228,139 @@ const CandidateAttempt = () => {
       document.removeEventListener('paste', handleCopyPaste);
       document.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('pagehide', handlePageHide);
     };
     // eslint-disable-next-line
   }, [isStarted, loading, timeLeft]);
 
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
+      if (retryTimeoutRef.current) clearTimeout(retryTimeoutRef.current);
+    };
+  }, []);
+
+  const saveResponsesToServer = async (payloadToSave, seq) => {
+    if (isSubmittingRef.current) return;
+    try {
+      const formattedResponses = Object.keys(payloadToSave).map(qId => ({
+        questionId: qId,
+        selectedOption: payloadToSave[qId]
+      }));
+
+      await axios.patch(`/api/attempts/${attemptId}/save`, { responses: formattedResponses, clientSeq: seq });
+
+      if (seq >= saveSeqRef.current) {
+        savedResponsesRef.current = { ...payloadToSave };
+        retryCountRef.current = 0;
+      }
+    } catch (err) {
+      if (isSubmittingRef.current) return;
+
+      const statusCode = err.response?.status;
+      if (statusCode === 400 || statusCode === 403 || statusCode === 404 || statusCode === 409) {
+        console.warn('Autosave rejected by server:', err.response?.data?.message);
+        return;
+      }
+
+      if (retryCountRef.current < 3) {
+        retryCountRef.current += 1;
+        const delay = retryCountRef.current * 1500;
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = setTimeout(() => {
+          if (!isSubmittingRef.current) {
+            triggerSave(true);
+          }
+        }, delay);
+      }
+    }
+  };
+
+  const triggerSave = (immediate = false) => {
+    if (isSubmittingRef.current) return;
+
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+
+    const doSave = () => {
+      if (isSubmittingRef.current) return;
+      const currentResponses = { ...responsesRef.current };
+
+      const currentKeys = Object.keys(currentResponses);
+      const savedKeys = Object.keys(savedResponsesRef.current);
+      const hasChanges = currentKeys.length !== savedKeys.length ||
+        currentKeys.some(k => currentResponses[k] !== savedResponsesRef.current[k]);
+
+      if (!hasChanges) return;
+
+      saveSeqRef.current += 1;
+      const seq = saveSeqRef.current;
+      saveResponsesToServer(currentResponses, seq);
+    };
+
+    if (immediate) {
+      doSave();
+    } else {
+      saveTimeoutRef.current = setTimeout(doSave, 600);
+    }
+  };
+
+  // Page-exit save via fetch+keepalive. Browsers do not deliver pending XHR requests
+  // after beforeunload unless keepalive:true is set. Fire-and-forget; best-effort only.
+  const fireKeepaliveSave = () => {
+    if (isSubmittingRef.current) return;
+    const currentResponses = { ...responsesRef.current };
+    const currentKeys = Object.keys(currentResponses);
+    if (currentKeys.length === 0) return;
+    const savedKeys = Object.keys(savedResponsesRef.current);
+    const hasChanges = currentKeys.length !== savedKeys.length ||
+      currentKeys.some(function(k) { return currentResponses[k] !== savedResponsesRef.current[k]; });
+    if (!hasChanges) return;
+    try {
+      const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      const token = userInfo && userInfo.token;
+      if (!token) return;
+      saveSeqRef.current += 1;
+      const seq = saveSeqRef.current;
+      const formattedResponses = currentKeys.map(function(qId) {
+        return { questionId: qId, selectedOption: currentResponses[qId] };
+      });
+      fetch('/api/attempts/' + attemptId + '/save', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({ responses: formattedResponses, clientSeq: seq }),
+        keepalive: true
+      });
+    } catch (e) {
+      // best-effort only on page exit
+    }
+  };
+
   const handleOptionSelect = (questionId, optionId) => {
-    const updated = { ...responses, [questionId]: optionId };
+    const updated = { ...responsesRef.current, [questionId]: optionId };
     setResponses(updated);
     responsesRef.current = updated;
+    triggerSave(false);
+  };
+
+  const handlePrevQuestion = () => {
+    triggerSave(true);
+    setCurrentQuestionIndex(prev => Math.max(0, prev - 1));
+  };
+
+  const handleNextQuestion = () => {
+    triggerSave(true);
+    setCurrentQuestionIndex(prev => Math.min(questions.length - 1, prev + 1));
+  };
+
+  const handleSelectQuestionIndex = (index) => {
+    triggerSave(true);
+    setCurrentQuestionIndex(index);
   };
 
   const toggleReviewMark = (questionId) => {
@@ -222,6 +374,16 @@ const CandidateAttempt = () => {
     if (!autoSubmit && !window.confirm('Are you absolutely sure you want to submit your quiz payload for grading?')) return;
 
     try {
+      isSubmittingRef.current = true;
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+        saveTimeoutRef.current = null;
+      }
+      if (retryTimeoutRef.current) {
+        clearTimeout(retryTimeoutRef.current);
+        retryTimeoutRef.current = null;
+      }
+
       const currentResponses = responsesRef.current;
       const formattedResponses = Object.keys(currentResponses).map(qId => ({
         questionId: qId,
@@ -236,6 +398,7 @@ const CandidateAttempt = () => {
 
       navigate(`/attempt/${attemptId}/result`, { state: { result: data, quiz } });
     } catch {
+      isSubmittingRef.current = false;
       alert('Network Error submitting quiz validation payload.');
     }
   };
@@ -359,22 +522,28 @@ const CandidateAttempt = () => {
 
                  <div className="space-y-4 max-w-4xl">
                    {currentQ.options.map((opt, idx) => {
-                     const isSelected = responses[currentQ._id] === opt;
+                     const optValue = typeof opt === 'object' && opt !== null
+                       ? (opt.value ?? opt.id ?? opt._id ?? opt.text ?? '')
+                       : String(opt ?? '');
+                     const optText = typeof opt === 'object' && opt !== null
+                       ? (opt.text ?? opt.label ?? opt.title ?? opt.value ?? '')
+                       : String(opt ?? '');
+                     const isSelected = responses[currentQ._id] === optValue || responses[currentQ._id] === opt;
                      return (
                        <label
                          key={`${currentQ._id}-${idx}`}
                          className={`group flex items-center p-5 rounded-2xl cursor-pointer transition-all duration-300 border-2 ${isSelected ? 'border-indigo-500 bg-indigo-50/70 shadow-md transform scale-[1.01]' : 'border-slate-200/60 hover:border-indigo-300 hover:bg-slate-50/80 hover:shadow-sm'}`}
                        >
                          <input
-                           type="radio" name={`question-${currentQ._id}`} value={opt}
+                           type="radio" name={`question-${currentQ._id}`} value={optValue}
                            checked={isSelected}
-                           onChange={() => handleOptionSelect(currentQ._id, opt)}
+                           onChange={() => handleOptionSelect(currentQ._id, optValue)}
                            className="hidden"
                          />
                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-lg mr-5 transition-all duration-300 ${isSelected ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110' : 'bg-slate-100 border border-slate-200 text-slate-400 group-hover:bg-indigo-100 group-hover:text-indigo-600 group-hover:border-indigo-200'}`}>
                            {letters[idx]}
                          </div>
-                         <span className={`text-lg transition-colors font-medium flex-1 ${isSelected ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}`}>{opt.text}</span>
+                         <span className={`text-lg transition-colors font-medium flex-1 ${isSelected ? 'text-indigo-900' : 'text-slate-700 group-hover:text-slate-900'}`}>{optText}</span>
 
                          {isSelected && <CheckCircle className="text-indigo-500 ml-4 animate-in fade-in zoom-in" size={24}/>}
                        </label>
@@ -385,7 +554,7 @@ const CandidateAttempt = () => {
                  {/* Question Footer Controls */}
                  <div className="mt-auto pt-10 flex justify-between items-center">
                     <button
-                       onClick={() => setCurrentQuestionIndex(Math.max(0, currentQuestionIndex - 1))}
+                       onClick={handlePrevQuestion}
                        disabled={currentQuestionIndex === 0}
                        className={`flex items-center px-6 py-3 rounded-xl font-bold transition-all text-sm ${currentQuestionIndex === 0 ? 'opacity-0 cursor-default' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:shadow-sm'}`}
                     >
@@ -393,7 +562,7 @@ const CandidateAttempt = () => {
                     </button>
 
                     <button
-                       onClick={() => setCurrentQuestionIndex(Math.min(questions.length - 1, currentQuestionIndex + 1))}
+                       onClick={handleNextQuestion}
                        disabled={currentQuestionIndex === questions.length - 1}
                        className={`flex items-center px-8 py-3 rounded-xl font-bold transition-all text-sm ${currentQuestionIndex === questions.length - 1 ? 'opacity-0 cursor-default' : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 hover:-translate-y-0.5'}`}
                     >
@@ -453,7 +622,7 @@ const CandidateAttempt = () => {
                    return (
                      <button
                        key={q._id}
-                       onClick={() => setCurrentQuestionIndex(i)}
+                       onClick={() => handleSelectQuestionIndex(i)}
                        className={`w-full aspect-square rounded-xl font-bold text-sm flex items-center justify-center transition-all border ${stateClasses} ${isActive ? 'ring-2 ring-indigo-600 ring-offset-2 scale-110 !font-black shadow-lg z-10' : 'shadow-sm hover:scale-105'}`}
                      >
                        {i + 1}

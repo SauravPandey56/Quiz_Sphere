@@ -1,6 +1,7 @@
+import mongoose from 'mongoose';
 import Quiz from '../models/Quiz.js';
 import ExamDeployment from '../models/ExamDeployment.js';
-import { buildCandidateEligibilityQuery } from '../utils/examEligibility.js';
+import { buildCandidateEligibilityQuery, isCandidateEligible, getDeploymentWindowState } from '../utils/examEligibility.js';
 
 const getDeploymentState = (deployment) => {
   if (deployment.status === 'ARCHIVED') return 'ARCHIVED';
@@ -119,7 +120,12 @@ export const getQuizzes = async (req, res) => {
 
 export const getQuizById = async (req, res) => {
   try {
-    const deployment = await ExamDeployment.findById(req.params.id)
+    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(404).json({ message: 'Exam not found' });
+    }
+
+    let deployment = await ExamDeployment.findById(id)
       .populate({
          path: 'quiz',
          populate: [
@@ -128,10 +134,49 @@ export const getQuizById = async (req, res) => {
          ]
       })
       .lean();
+
+    if (!deployment) {
+      // Check if id is a Quiz ID
+      deployment = await ExamDeployment.findOne({ quiz: id })
+        .populate({
+           path: 'quiz',
+           populate: [
+              { path: 'course', select: 'name' },
+              { path: 'examiner', select: 'name' }
+           ]
+        })
+        .lean();
+    }
       
-    if (!deployment) return res.status(404).json({ message: 'Exam not found' });
-    
-    res.json(mapToFrontendQuiz(deployment));
+    if (!deployment || !deployment.quiz) return res.status(404).json({ message: 'Exam not found' });
+
+    // Role-based authorization
+    if (req.user.role === 'admin') {
+      return res.json(mapToFrontendQuiz(deployment));
+    }
+
+    if (req.user.role === 'examiner') {
+      const examinerId = deployment.quiz.examiner?._id || deployment.quiz.examiner;
+      if (examinerId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ message: 'Not authorized to access this exam' });
+      }
+      return res.json(mapToFrontendQuiz(deployment));
+    }
+
+    if (req.user.role === 'candidate') {
+      if (!isCandidateEligible(deployment, req.user)) {
+        return res.status(403).json({ message: 'You are not eligible for this exam' });
+      }
+
+      const windowState = getDeploymentWindowState(deployment);
+      if (windowState !== 'LIVE' || deployment.isPaused || !deployment.quiz.isActive) {
+        return res.status(403).json({ message: 'Exam is not currently accessible' });
+      }
+
+      return res.json(mapToFrontendQuiz(deployment));
+    }
+
+    return res.status(403).json({ message: 'Not authorized' });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

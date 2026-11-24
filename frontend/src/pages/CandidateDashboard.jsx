@@ -9,6 +9,7 @@ import {
 import QuizSphereLogo from '../components/logo/QuizSphereLogo';
 import ProfileEditor from '../components/profile/ProfileEditor';
 import Timer from '../components/common/Timer';
+import UserAvatar from '../components/common/UserAvatar';
 import DashboardLayout from '../components/layout/DashboardLayout';
 import Sidebar from '../components/layout/Sidebar';
 import Navbar from '../components/layout/Navbar';
@@ -192,9 +193,11 @@ const CandidateDashboard = () => {
           customTopSpace="Main Menu"
           customHeader={
             <div className="p-5 border-b border-slate-800 flex items-center space-x-3 bg-white/5">
-               <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-[#06B6D4] text-white flex items-center justify-center font-bold shadow-md shrink-0">
-                 {getAvatarInitials(user.name)}
-               </div>
+               <UserAvatar
+                 src={user.profileImage}
+                 name={user.name}
+                 className="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-[#06B6D4] text-white font-bold shadow-md shrink-0"
+               />
                <div className="overflow-hidden">
                  <p className="text-sm font-bold text-white leading-tight truncate">{user.name}</p>
                  <p className="text-[10px] uppercase font-bold text-[#06B6D4] tracking-widest truncate">Candidate</p>
@@ -685,9 +688,11 @@ const CandidateDashboard = () => {
             <div className="animate-fade-in max-w-4xl mx-auto pb-12">
               <div className="bg-gradient-to-br from-indigo-700 via-indigo-600 to-[#06B6D4] rounded-3xl p-8 lg:p-10 shadow-2xl mb-8 relative overflow-hidden text-center sm:text-left flex flex-col sm:flex-row items-center border border-white/20">
                  <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djI2aDJWMzRoLTIyem0wLTEwaDJWMGgtdjI0ek0yNCAzNGgtMjR2MmgyNHYtMnptMC0xMEgyNHYyaC0yNHYtMnoiLz48L2c+PC9nPjwvc3ZnPg==')] opacity-30"></div>
-                 <div className="relative z-10 w-28 h-28 rounded-full border-4 border-white/30 bg-white/10 backdrop-blur-xl flex items-center justify-center text-4xl font-black text-white shadow-[0_0_40px_rgba(255,255,255,0.3)] mb-6 sm:mb-0">
-                    {getAvatarInitials(user.name)}
-                 </div>
+                 <UserAvatar
+                    src={user.profileImage}
+                    name={user.name}
+                    className="relative z-10 w-28 h-28 rounded-full border-4 border-white/30 bg-white/10 backdrop-blur-xl text-4xl font-black text-white shadow-[0_0_40px_rgba(255,255,255,0.3)] mb-6 sm:mb-0"
+                 />
                  <div className="relative z-10 sm:ml-8 text-white">
                     <h1 className="text-3xl font-black mb-1 tracking-tight">{user.name}</h1>
                     <div className="flex flex-col sm:flex-row items-center sm:space-x-3 text-white/90 text-sm font-medium">

@@ -1,5 +1,50 @@
 @import "tailwindcss";
 
+:root {
+  /* Light theme defaults */
+  --bg: #F8FAFC;
+  --surface: #FFFFFF;
+  --surface-2: #F1F5F9;
+  --border: #E2E8F0;
+
+  --primary: #6D4AFF;
+  --primary-hover: #5A35E8;
+
+  --gold: #F5C451;
+
+  --text: #1E293B;
+  --muted: #64748B;
+
+  --correct: #34D399;
+  --wrong: #FB7185;
+  --warning: #FBBF24;
+
+  --radius-card: 16px;
+  --radius-btn: 12px;
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+
+  --gradient-primary: linear-gradient(135deg, #6D4AFF 0%, #4F8CFF 100%);
+  --gradient-gold: linear-gradient(135deg, #F5C451 0%, #E8A33D 100%);
+}
+
+.dark {
+  --bg: #0B1020;
+  --surface: #131A2E;
+  --surface-2: #1C2540;
+  --border: #2A3556;
+
+  --primary: #7C5CFF;
+  --primary-hover: #6B4DE6;
+
+  --text: #F1F5F9;
+  --muted: #94A3B8;
+
+  --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+
+  --gradient-primary: linear-gradient(135deg, #7C5CFF 0%, #4F8CFF 100%);
+}
+
 @layer utilities {
   .glass {
     @apply bg-white/70 backdrop-blur-lg border border-white/40 shadow-xl;
@@ -21,23 +66,23 @@ body {
 }
 
 .dark body {
-  @apply bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-slate-100;
+  @apply bg-[#0B1020] text-slate-100;
 }
 
 .dark .bg-white {
-  @apply !bg-slate-800;
+  @apply !bg-[#131A2E];
 }
 
 .dark .bg-slate-50 {
-  @apply !bg-slate-900;
+  @apply !bg-[#0B1020];
 }
 
 .dark .bg-slate-50\/50 {
-  @apply !bg-slate-900/50;
+  @apply !bg-[#0B1020]/50;
 }
 
 .dark .bg-slate-100, .dark .bg-slate-200 {
-  @apply !bg-slate-700;
+  @apply !bg-[#1C2540];
 }
 
 .dark .text-slate-800, .dark .text-slate-900, .dark .text-gray-800 {
@@ -57,48 +102,68 @@ body {
 }
 
 .dark .border-slate-100, .dark .border-slate-200, .dark .border-slate-300, .dark .border-gray-200 {
-  @apply !border-slate-700;
+  @apply !border-[#2A3556];
 }
 
 .dark .divide-slate-100 > :not([hidden]) ~ :not([hidden]),
 .dark .divide-slate-200 > :not([hidden]) ~ :not([hidden]) {
-  @apply !border-slate-700;
+  @apply !border-[#2A3556];
 }
 
 .dark .divide-slate-100\/60 > :not([hidden]) ~ :not([hidden]) {
-  @apply !border-slate-700/60;
+  @apply !border-[#2A3556]/60;
 }
 
 .dark .divide-slate-100\/80 > :not([hidden]) ~ :not([hidden]) {
-  @apply !border-slate-700/80;
+  @apply !border-[#2A3556]/80;
 }
 
 .dark .border-slate-100\/50, .dark .border-slate-200\/60 {
-  @apply !border-slate-700/50;
+  @apply !border-[#2A3556]/50;
 }
 
 .dark .bg-slate-50\/80 {
-  @apply !bg-slate-900/80;
+  @apply !bg-[#0B1020]/80;
 }
 
 .dark .bg-slate-50\/30 {
-  @apply !bg-slate-900/30;
+  @apply !bg-[#0B1020]/30;
 }
 
 .dark .bg-slate-200\/50 {
-  @apply !bg-slate-800/50;
+  @apply !bg-[#1C2540]/50;
 }
 
 .dark .hover\:bg-slate-50\/80:hover {
-  @apply !bg-slate-800/80;
+  @apply !bg-[#1C2540]/80;
 }
 
 .dark .glass {
-  @apply !bg-slate-900/60 !backdrop-blur-xl !border-slate-700/50 !shadow-xl !text-white;
+  @apply !bg-[#131A2E]/70 !backdrop-blur-xl !border-[#2A3556] !shadow-xl !text-white;
 }
 
 .dark .glass-panel {
-  @apply !bg-slate-800/50 !backdrop-blur-md !border-slate-600/40 !rounded-2xl !shadow-lg !text-white;
+  @apply !bg-[#131A2E]/80 !backdrop-blur-md !border-[#2A3556] !rounded-2xl !shadow-lg !text-white;
+}
+
+/* Primary Violet and Status Calibration */
+.bg-indigo-600, .bg-indigo-500 {
+  background-color: var(--primary) !important;
+}
+.hover\:bg-indigo-700:hover, .hover\:bg-indigo-600:hover, .hover\:bg-indigo-500:hover {
+  background-color: var(--primary-hover) !important;
+}
+.text-indigo-600, .text-indigo-500, .text-indigo-700 {
+  color: var(--primary) !important;
+}
+.border-indigo-500, .border-indigo-600 {
+  border-color: var(--primary) !important;
+}
+.focus\:border-indigo-500:focus, .focus-within\:border-indigo-500:focus-within {
+  border-color: var(--primary) !important;
+}
+.focus\:ring-indigo-500:focus, .focus-within\:ring-indigo-500:focus-within {
+  --tw-ring-color: var(--primary) !important;
 }
 
 @keyframes fadeIn {

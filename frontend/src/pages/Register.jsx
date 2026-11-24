@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import InteractiveBackground from '../components/layout/InteractiveBackground';
+import { ThemeContext } from '../context/ThemeContext';
 import QuizSphereLogo from '../components/logo/QuizSphereLogo';
-import { Mail, Lock, User, Phone, MapPin, Camera, ArrowRight, UserCircle, Briefcase, GraduationCap } from 'lucide-react';
+import { 
+  User, Mail, Lock, Eye, EyeOff, GraduationCap, 
+  UserCheck, Phone, MapPin, Camera, ArrowRight, ArrowLeft, 
+  Check, Sun, Moon, AlertCircle
+} from 'lucide-react';
 
 const Register = () => {
   const [step, setStep] = useState(1);
@@ -17,11 +21,13 @@ const Register = () => {
   const [courses, setCourses] = useState([]);
   const [settings, setSettings] = useState([]);
   const [error, setError] = useState('');
-  const [focusedField, setFocusedField] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
-  const [conformPassword, setConformPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   const { register } = useContext(AuthContext);
+  const { theme, toggleTheme } = useContext(ThemeContext);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -31,12 +37,12 @@ const Register = () => {
           axios.get('/api/courses'),
           axios.get('/api/settings')
         ]);
-        setCourses(coursesRes.data);
-        if (coursesRes.data.length > 0) {
+        setCourses(coursesRes.data || []);
+        if (coursesRes.data && coursesRes.data.length > 0) {
           setFormData(prev => ({ ...prev, course: coursesRes.data[0]._id }));
         }
-        setSettings(settingsRes.data);
-      } catch (err) {
+        setSettings(settingsRes.data || []);
+      } catch {
         console.error('Data fetch failed');
       }
     };
@@ -66,207 +72,638 @@ const Register = () => {
     }
   };
 
+  const getPasswordStrengthLabel = () => {
+    if (passwordStrength === 0) return { label: 'Too short', color: 'text-slate-400' };
+    if (passwordStrength <= 25) return { label: 'Weak', color: 'text-rose-500' };
+    if (passwordStrength <= 50) return { label: 'Fair', color: 'text-amber-500' };
+    if (passwordStrength <= 75) return { label: 'Good', color: 'text-indigo-400' };
+    return { label: 'Strong', color: 'text-emerald-500' };
+  };
+
   const validateStep1 = () => {
     setError('');
-    if (!formData.name || !formData.email || !formData.password) {
-      setError('All field are required'); return false;
+    if (!formData.name.trim()) {
+      setError('Please enter your full name.');
+      return false;
+    }
+    if (!formData.email.trim() || !formData.email.includes('@')) {
+      setError('Please provide a valid email address.');
+      return false;
+    }
+    if (!formData.password || formData.password.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return false;
+    }
+    if (formData.password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return false;
     }
     return true;
   };
 
   const handleNextStep = () => {
-  if (step === 1 && validateStep1()) {
-    if (formData.role === 'examiner') setStep(3); // Skip academic setup
-    else setStep(2);
-  } else if (step === 2) {
-    // Extract step 2 fields
-    const { course, universityCampus, branch, semester, section } = formData;
-
-    // Validate that none of the step 2 fields are empty
-    if (!course || !universityCampus || !branch || !semester || !section) {
-      setError('Please Enter Acedamic details'); 
-      return; // Stop execution and stay on step 2
+    if (step === 1) {
+      if (!validateStep1()) return;
+      if (formData.role === 'examiner') {
+        setStep(3); // Examiner skips academic setup directly to Step 3
+      } else {
+        setStep(2);
+      }
+      return;
     }
 
-    setStep(3);
-  }
-};
-
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const payload = { ...formData };
-      if (payload.role !== 'candidate') delete payload.course;
-      await register(payload);
-      navigate('/');
-    } catch (err) {
-      setError(err.response?.data?.message || 'Registration sequence critically failed.');
+    if (step === 2) {
+      const { course, universityCampus, branch, semester, section } = formData;
+      if (!course || !universityCampus || !branch || !semester || !section) {
+        setError('Please complete all academic details before continuing.');
+        return;
+      }
+      setError('');
+      setStep(3);
     }
   };
 
+
+  const handleBackStep = () => {
+    setError('');
+    if (step === 3) {
+      if (formData.role === 'examiner') {
+        setStep(1); // Examiner returns back to Step 1
+      } else {
+        setStep(2);
+      }
+    } else if (step === 2) {
+      setStep(1);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (formData.password !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const payload = { ...formData };
+      if (payload.role !== 'candidate') {
+        delete payload.course;
+      }
+      await register(payload);
+      navigate('/');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed. Please check your information and try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Step metadata
+  const stepsMeta = [
+    { num: 1, title: 'Account Details', subtitle: 'Personal credentials' },
+    { num: 2, title: 'Academic Details', subtitle: 'Course & campus' },
+    { num: 3, title: 'Contact & Profile', subtitle: 'Final review' },
+  ];
+
   return (
-    <InteractiveBackground>
-      <div className="flex-1 flex items-center justify-center p-6 relative z-10 w-full animate-fade-in relative z-20">
-        
-        {/* Registration Glass Card */}
-        <div className="w-full max-w-[500px]">
-           <div className="bg-[#111113]/80 backdrop-blur-3xl border border-white/5 p-8 rounded-[32px] shadow-2xl relative overflow-hidden group">
-             
-             {/* Progress Engine */}
-             <div className="flex items-center justify-between mb-10 px-2 relative z-10">
-               {[1, 2, 3].map((s) => (
-                 <div key={s} className="flex items-center">
-                   <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-500 z-10 
-                     ${step >= s ? 'bg-indigo-600 border-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.5)]' : 'bg-[#1A1A1E] border-white/10 text-slate-500'} 
-                     border-2`}>
-                     {s === 1 ? <UserCircle size={14} /> : s === 2 ? <GraduationCap size={14} /> : <Briefcase size={14} />}
-                   </div>
-                   {s !== 3 && (
-                     <div className="w-[100px] sm:w-[130px] h-1 bg-[#1A1A1E] rounded-full mx-2 overflow-hidden relative">
-                        <div className={`absolute left-0 top-0 h-full bg-indigo-500 transition-all duration-1000 ${step > s ? 'w-full' : 'w-0'}`}></div>
-                     </div>
-                   )}
-                 </div>
-               ))}
-             </div>
+    <div className="min-h-screen bg-[var(--bg)] text-[var(--text)] flex flex-col justify-between transition-colors duration-300 selection:bg-[var(--primary)]/30 selection:text-[var(--primary)] relative overflow-hidden">
+      
+      {/* Subtle Background Radial Glow */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-[var(--primary)]/10 rounded-full blur-[140px] pointer-events-none -z-10"></div>
+      <div className="absolute bottom-0 right-10 w-[400px] h-[300px] bg-[#4F8CFF]/5 rounded-full blur-[120px] pointer-events-none -z-10"></div>
 
-             <div className="mb-8 text-center relative z-10">
-               <h2 className="text-3xl font-black text-white tracking-tight mb-2">
-                 {step === 1 ? "Initialize Identity" : step === 2 ? "Academic Matrix" : "Finalize Profile"}
-               </h2>
-               <p className="text-slate-400 text-sm font-medium">Join the intelligent evaluation platform.</p>
-             </div>
-
-
-             <form onSubmit={handleSubmit} className="relative z-10">
-               
-               {/* STEP 1: BASIC INFO */}
-               {step === 1 && (
-                 <div className="space-y-5 animate-slide-right">
-                    {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm font-bold flex items-center justify-center animate-pulse">{error}</div>}
-                    {/* Role Selection */}
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                       <label className={`cursor-pointer rounded-2xl p-4 border transition-all duration-300 transform hover:-translate-y-1 ${formData.role === 'candidate' ? 'bg-indigo-600/10 border-indigo-500/50 shadow-[0_0_20px_rgba(79,70,229,0.1)]' : 'bg-[#1A1A1E] border-white/5 hover:border-white/20'}`}>
-                         <input type="radio" name="role" value="candidate" checked={formData.role === 'candidate'} onChange={handleChange} className="hidden" />
-                         <GraduationCap size={24} className={`mb-3 ${formData.role === 'candidate' ? 'text-indigo-400' : 'text-slate-500'}`} />
-                         <p className={`font-bold text-sm ${formData.role === 'candidate' ? 'text-white' : 'text-slate-400'}`}>Candidate</p>
-                         <p className="text-[10px] text-slate-500 mt-1 leading-tight">Execute modules & track rank.</p>
-                       </label>
-
-
-                       <label className={`cursor-pointer rounded-2xl p-4 border transition-all duration-300 transform hover:-translate-y-1 ${formData.role === 'examiner' ? 'bg-cyan-500/10 border-cyan-500/50 shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-[#1A1A1E] border-white/5 hover:border-white/20'}`}>
-                         <input type="radio" name="role" value="examiner" checked={formData.role === 'examiner'} onChange={handleChange} className="hidden" />
-                         <UserCircle size={24} className={`mb-3 ${formData.role === 'examiner' ? 'text-cyan-400' : 'text-slate-500'}`} />
-                         <p className={`font-bold text-sm ${formData.role === 'examiner' ? 'text-white' : 'text-slate-400'}`}>Examiner</p>
-                         <p className="text-[10px] text-slate-500 mt-1 leading-tight">Manage testing parameters.</p>
-                       </label>
-                    </div>
-
-                    <InputField icon={<User size={18}/>} type="text" name="name" label="Full name" value={formData.name} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
-                    <InputField icon={<Mail size={18}/>} type="email" name="email" label="Email" value={formData.email} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
-                    
-                    <div className="relative">
-                      <InputField icon={<Lock size={18}/>} type="password" name="password" label="Password" value={formData.password} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
-
-                      <InputField icon={<Lock size={18}/>} type="password" name="password" label="Confirm password" value={conformPassword} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
-
-                      <div className="flex h-1 mt-2 space-x-1 w-full rounded-full overflow-hidden bg-[#1A1A1E]">
-                        <div className={`h-full transition-all duration-500 ${passwordStrength > 0 ? (passwordStrength > 50 ? 'bg-cyan-500' : 'bg-red-500') : 'bg-transparent'} w-1/4`}></div>
-                        <div className={`h-full transition-all duration-500 ${passwordStrength > 25 ? (passwordStrength > 50 ? 'bg-cyan-500' : 'bg-amber-500') : 'bg-transparent'} w-1/4`}></div>
-                        <div className={`h-full transition-all duration-500 ${passwordStrength > 50 ? (passwordStrength > 75 ? 'bg-indigo-500' : 'bg-cyan-500') : 'bg-transparent'} w-1/4`}></div>
-                        <div className={`h-full transition-all duration-500 ${passwordStrength > 75 ? 'bg-indigo-500' : 'bg-transparent'} w-1/4`}></div>
-                      </div>
-                    </div>
-
-                    <button type="button" onClick={handleNextStep} className="w-full mt-8 bg-white text-black font-extrabold py-4 px-4 rounded-xl shadow-[0_0_20px_rgba(255,255,255,0.2)] transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center group overflow-hidden">
-                       <span className="relative z-10 flex items-center">Engage Pipeline <ArrowRight size={18} className="ml-2 group-hover:translate-x-1 transition-transform" /></span>
-                    </button>
-                 </div>
-               )}
-
-
-               {/* STEP 2: ACADEMIC INFO */}
-               {step === 2 && (
-                <div className="space-y-4 animate-slide-left">
-                    {error && <div className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-xl mb-6 text-sm font-bold flex items-center justify-center animate-pulse">{error}</div>}
-
-                    <SelectField label="Enrolled Course" name="course" value={formData.course} required onChange={handleChange} options={courses.map(c => ({val: c._id, tag: c.name}))} />
-
-                    <SelectField label="Campus" name="universityCampus" value={formData.universityCampus} required onChange={handleChange} options={getOptions(campuses, defaultCampuses).map(c => ({val: c, tag: c}))} />
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <SelectField label="Branch" name="branch" value={formData.branch} required onChange={handleChange} options={getOptions(branches, defaultBranches).map(b => ({val: b, tag: b}))} />
-                      <SelectField label="Semester" name="semester" value={formData.semester} required onChange={handleChange} options={[1,2,3,4,5,6,7,8].map(s => ({val: s, tag: `Sem ${s}`}))} />
-                    </div>
-
-                    <SelectField label="Section" name="section" value={formData.section} required onChange={handleChange} options={getOptions(sections, defaultSections).map(s => ({val: s, tag: `Sec ${s}`}))} />
-
-                    <div className="flex space-x-3 pt-4">
-                      <button type="button" onClick={() => setStep(1)} className="flex-1 bg-transparent border border-white/10 text-white hover:bg-white/5 font-bold py-4 rounded-xl transition-all">Back</button>
-                      <button type="button" onClick={handleNextStep} className="flex-[2] bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold py-4 rounded-xl shadow-[0_0_20px_rgba(79,70,229,0.3)] transition-all transform hover:scale-[1.02] active:scale-[0.98]">Confirm Matrix</button>
-                    </div>
-                </div>
-              )}              
-
-
-               {/* STEP 3: PROFILE SETUP */}
-               {step === 3 && (
-                 <div className="space-y-5 animate-slide-left">
-                    <div className="flex justify-center mb-6">
-                      <div className="w-24 h-24 rounded-full bg-[#1A1A1E] border-2 border-dashed border-slate-600 flex flex-col items-center justify-center text-slate-500 hover:border-indigo-500 hover:text-indigo-400 transition-colors cursor-pointer group">
-                        <Camera size={24} className="mb-1 group-hover:scale-110 transition-transform" />
-                        <span className="text-[10px] uppercase tracking-widest font-bold">Upload</span>
-                      </div>
-                    </div>
-                    
-                    <InputField icon={<Phone size={18}/>} type="text" name="contact" label="Digital Contact Pipeline" value={formData.contact} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
-                    <InputField icon={<MapPin size={18}/>} type="text" name="address" label="Geographical Vector" value={formData.address} onChange={handleChange} focused={focusedField} setFocused={setFocusedField} />
-                    
-                    <div className="flex space-x-3 pt-4">
-                      <button type="button" onClick={() => setStep(formData.role === 'examiner' ? 1 : 2)} className="flex-1 bg-transparent border border-white/10 text-white hover:bg-white/5 font-bold py-4 rounded-xl transition-all">Back</button>
-                      <button type="submit" className="flex-[2] bg-gradient-to-r from-indigo-500 to-cyan-500 hover:from-indigo-400 hover:to-cyan-400 text-white font-extrabold py-4 rounded-xl shadow-[0_0_20px_rgba(6,182,212,0.3)] transition-all transform hover:scale-[1.02] active:scale-[0.98]">Finalize Build</button>
-                    </div>
-                 </div>
-               )}
-
-             </form>
-
-           </div>
-           <p className="mt-8 text-center text-sm font-medium text-slate-500">
-             Already Registered? <span onClick={() => navigate('/login')} className="text-white hover:text-indigo-400 cursor-pointer transition-colors border-b border-transparent hover:border-indigo-400 pb-0.5 ml-1">Login</span>
-           </p>
+      {/* Top Header Bar */}
+      <header className="w-full max-w-5xl mx-auto px-6 py-6 flex items-center justify-between relative z-10">
+        <Link to="/" className="focus:outline-none focus:ring-2 focus:ring-[var(--primary)] rounded-lg">
+          <QuizSphereLogo size="md" layout="horizontal" />
+        </Link>
+        <div className="flex items-center gap-4">
+          <button 
+            type="button" 
+            onClick={toggleTheme} 
+            className="p-2.5 rounded-xl bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--text)] border border-[var(--border)] transition-colors focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
+          <div className="hidden sm:flex items-center text-xs text-[var(--muted)]">
+            Already registered?
+            <Link to="/login" className="ml-1.5 font-semibold text-[var(--primary)] hover:underline">
+              Sign In
+            </Link>
+          </div>
         </div>
-      </div>
-    </InteractiveBackground>
+      </header>
+
+      {/* Centered Registration Container */}
+      <main className="w-full max-w-2xl mx-auto px-4 sm:px-6 py-4 flex-1 flex flex-col justify-center relative z-10">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-3xl p-6 sm:p-10 shadow-[var(--shadow)] relative overflow-hidden transition-all duration-300">
+          
+          {/* Header Title */}
+          <div className="text-center mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text)] font-heading">
+              Create Your Account
+            </h1>
+            <p className="text-sm text-[var(--muted)] mt-1.5">
+              Join QuizSphere to experience secure online examinations
+            </p>
+          </div>
+
+          {/* Stepper Progress Indicator */}
+          <div className="mb-8" aria-label="Registration Progress">
+            <div className="flex items-center justify-between relative">
+              {/* Stepper Track */}
+              <div className="absolute top-4 left-6 right-6 h-0.5 bg-[var(--border)] -z-0"></div>
+              <div 
+                className="absolute top-4 left-6 h-0.5 bg-[var(--primary)] transition-all duration-300 -z-0"
+                style={{
+                  width: step === 1 ? '0%' : step === 2 ? '50%' : '100%'
+                }}
+              ></div>
+
+              {stepsMeta.map((s) => {
+                const isCompleted = step > s.num;
+                const isCurrent = step === s.num;
+                const isSkipped = formData.role === 'examiner' && s.num === 2;
+
+                return (
+                  <div key={s.num} className="flex flex-col items-center relative z-10">
+                    <div 
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 border-2 ${
+                        isCompleted 
+                          ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-md shadow-[var(--primary)]/20' 
+                          : isCurrent 
+                            ? 'bg-[var(--surface)] border-[var(--primary)] text-[var(--primary)] ring-4 ring-[var(--primary)]/15 font-extrabold'
+                            : isSkipped 
+                              ? 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]/50 opacity-60'
+                              : 'bg-[var(--surface-2)] border-[var(--border)] text-[var(--muted)]'
+                      }`}
+                      aria-current={isCurrent ? 'step' : undefined}
+                    >
+                      {isCompleted ? <Check size={16} strokeWidth={3} /> : s.num}
+                    </div>
+                    <span className={`text-xs mt-2 font-medium hidden sm:block ${isCurrent ? 'text-[var(--text)] font-semibold' : 'text-[var(--muted)]'}`}>
+                      {isSkipped ? 'Academic (N/A)' : s.title}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Error Alert Box */}
+          {error && (
+            <div 
+              role="alert" 
+              className="mb-6 p-3.5 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-500 text-sm flex items-center gap-2.5 transition-all"
+            >
+              <AlertCircle size={18} className="shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Form Content */}
+          <form onSubmit={handleSubmit} noValidate>
+            
+            {/* ================= STEP 1: ACCOUNT DETAILS ================= */}
+            {step === 1 && (
+              <div className="space-y-5 animate-fade-in">
+                
+                {/* Role Selection Cards */}
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-2.5">
+                    Select Your Role
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    
+                    {/* Candidate Option */}
+                    <label 
+                      className={`relative cursor-pointer rounded-2xl p-4 border transition-all duration-200 flex flex-col justify-between ${
+                        formData.role === 'candidate' 
+                          ? 'bg-[var(--primary)]/10 border-[var(--primary)] shadow-sm' 
+                          : 'bg-[var(--surface-2)] border-[var(--border)] hover:border-[var(--primary)]/40'
+                      }`}
+                    >
+                      <input 
+                        type="radio" 
+                        name="role" 
+                        value="candidate" 
+                        checked={formData.role === 'candidate'} 
+                        onChange={handleChange} 
+                        className="sr-only" 
+                      />
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`p-2 rounded-xl ${formData.role === 'candidate' ? 'bg-[var(--primary)] text-white' : 'bg-[var(--border)] text-[var(--muted)]'}`}>
+                          <GraduationCap size={20} />
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          formData.role === 'candidate' ? 'border-[var(--primary)] bg-[var(--primary)]' : 'border-[var(--border)]'
+                        }`}>
+                          {formData.role === 'candidate' && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-sm text-[var(--text)] block">Candidate</span>
+                        <span className="text-xs text-[var(--muted)] mt-0.5 block leading-relaxed">
+                          Take exams and track your academic progress
+                        </span>
+                      </div>
+                    </label>
+
+                    {/* Examiner Option */}
+                    <label 
+                      className={`relative cursor-pointer rounded-2xl p-4 border transition-all duration-200 flex flex-col justify-between ${
+                        formData.role === 'examiner' 
+                          ? 'bg-[var(--primary)]/10 border-[var(--primary)] shadow-sm' 
+                          : 'bg-[var(--surface-2)] border-[var(--border)] hover:border-[var(--primary)]/40'
+                      }`}
+                    >
+                      <input 
+                        type="radio" 
+                        name="role" 
+                        value="examiner" 
+                        checked={formData.role === 'examiner'} 
+                        onChange={handleChange} 
+                        className="sr-only" 
+                      />
+                      <div className="flex items-center justify-between mb-2">
+                        <div className={`p-2 rounded-xl ${formData.role === 'examiner' ? 'bg-[var(--primary)] text-white' : 'bg-[var(--border)] text-[var(--muted)]'}`}>
+                          <UserCheck size={20} />
+                        </div>
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          formData.role === 'examiner' ? 'border-[var(--primary)] bg-[var(--primary)]' : 'border-[var(--border)]'
+                        }`}>
+                          {formData.role === 'examiner' && <div className="w-1.5 h-1.5 rounded-full bg-white"></div>}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-semibold text-sm text-[var(--text)] block">Examiner</span>
+                        <span className="text-xs text-[var(--muted)] mt-0.5 block leading-relaxed">
+                          Create, deploy, and evaluate examinations
+                        </span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                {/* Full Name */}
+                <div>
+                  <label htmlFor="name" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                    Full Name
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--muted)]">
+                      <User size={18} />
+                    </div>
+                    <input 
+                      type="text" 
+                      name="name" 
+                      id="name" 
+                      required
+                      value={formData.name} 
+                      onChange={handleChange} 
+                      placeholder="e.g. Saurav Pandey"
+                      className="w-full pl-10 pr-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] placeholder:text-[var(--muted)]/60 focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Email Address */}
+                <div>
+                  <label htmlFor="email" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                    Email Address
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--muted)]">
+                      <Mail size={18} />
+                    </div>
+                    <input 
+                      type="email" 
+                      name="email" 
+                      id="email" 
+                      required
+                      value={formData.email} 
+                      onChange={handleChange} 
+                      placeholder="e.g. saurav@university.edu"
+                      className="w-full pl-10 pr-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] placeholder:text-[var(--muted)]/60 focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Password & Strength Bar */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label htmlFor="password" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)]">
+                      Password
+                    </label>
+                    {formData.password && (
+                      <span className={`text-xs font-semibold ${getPasswordStrengthLabel().color}`}>
+                        {getPasswordStrengthLabel().label}
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--muted)]">
+                      <Lock size={18} />
+                    </div>
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      name="password" 
+                      id="password" 
+                      required
+                      value={formData.password} 
+                      onChange={handleChange} 
+                      placeholder="Minimum 6 characters"
+                      className="w-full pl-10 pr-11 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] placeholder:text-[var(--muted)]/60 focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-[var(--muted)] hover:text-[var(--text)] transition-colors focus:outline-none"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+
+                  {/* Password Strength Visual Meter */}
+                  <div className="grid grid-cols-4 gap-1.5 mt-2.5">
+                    <div className={`h-1 rounded-full transition-all duration-300 ${passwordStrength >= 25 ? 'bg-rose-500' : 'bg-[var(--border)]'}`}></div>
+                    <div className={`h-1 rounded-full transition-all duration-300 ${passwordStrength >= 50 ? 'bg-amber-500' : 'bg-[var(--border)]'}`}></div>
+                    <div className={`h-1 rounded-full transition-all duration-300 ${passwordStrength >= 75 ? 'bg-indigo-400' : 'bg-[var(--border)]'}`}></div>
+                    <div className={`h-1 rounded-full transition-all duration-300 ${passwordStrength >= 100 ? 'bg-emerald-500' : 'bg-[var(--border)]'}`}></div>
+                  </div>
+                </div>
+
+                {/* Confirm Password */}
+                <div>
+                  <label htmlFor="confirmPassword" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                    Confirm Password
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--muted)]">
+                      <Lock size={18} />
+                    </div>
+                    <input 
+                      type={showPassword ? 'text' : 'password'} 
+                      name="confirmPassword" 
+                      id="confirmPassword" 
+                      required
+                      value={confirmPassword} 
+                      onChange={(e) => setConfirmPassword(e.target.value)} 
+                      placeholder="Re-enter your password"
+                      className="w-full pl-10 pr-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] placeholder:text-[var(--muted)]/60 focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Continue CTA */}
+                <button 
+                  type="button" 
+                  onClick={handleNextStep}
+                  className="w-full mt-4 py-3.5 px-5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[var(--primary)]/20 transition-all duration-150 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                >
+                  <span>Continue</span>
+                  <ArrowRight size={18} />
+                </button>
+              </div>
+            )}
+
+            {/* ================= STEP 2: ACADEMIC DETAILS ================= */}
+            {step === 2 && (
+              <div className="space-y-4 animate-fade-in">
+                
+                {/* Course Dropdown */}
+                <div>
+                  <label htmlFor="course" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                    Enrolled Course
+                  </label>
+                  <select 
+                    id="course"
+                    name="course" 
+                    value={formData.course} 
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                  >
+                    <option value="" disabled>Select your course</option>
+                    {courses.map(c => (
+                      <option key={c._id} value={c._id} className="bg-[var(--surface)] text-[var(--text)]">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Campus Dropdown */}
+                <div>
+                  <label htmlFor="universityCampus" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                    Campus
+                  </label>
+                  <select 
+                    id="universityCampus"
+                    name="universityCampus" 
+                    value={formData.universityCampus} 
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                  >
+                    <option value="">Select your campus</option>
+                    {getOptions(campuses, defaultCampuses).map((c, i) => (
+                      <option key={i} value={c} className="bg-[var(--surface)] text-[var(--text)]">
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Branch and Semester 2-Column Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  <div>
+                    <label htmlFor="branch" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                      Branch
+                    </label>
+                    <select 
+                      id="branch"
+                      name="branch" 
+                      value={formData.branch} 
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                    >
+                      <option value="">Select branch</option>
+                      {getOptions(branches, defaultBranches).map((b, i) => (
+                        <option key={i} value={b} className="bg-[var(--surface)] text-[var(--text)]">
+                          {b}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label htmlFor="semester" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                      Semester
+                    </label>
+                    <select 
+                      id="semester"
+                      name="semester" 
+                      value={formData.semester} 
+                      onChange={handleChange}
+                      className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                    >
+                      {[1, 2, 3, 4, 5, 6, 7, 8].map(s => (
+                        <option key={s} value={s} className="bg-[var(--surface)] text-[var(--text)]">
+                          Semester {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Section Dropdown */}
+                <div>
+                  <label htmlFor="section" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                    Section
+                  </label>
+                  <select 
+                    id="section"
+                    name="section" 
+                    value={formData.section} 
+                    onChange={handleChange}
+                    className="w-full px-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                  >
+                    <option value="">Select section</option>
+                    {getOptions(sections, defaultSections).map((s, i) => (
+                      <option key={i} value={s} className="bg-[var(--surface)] text-[var(--text)]">
+                        Section {s}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Navigation Buttons */}
+                <div className="flex items-center gap-3 pt-3">
+                  <button 
+                    type="button" 
+                    onClick={handleBackStep}
+                    className="flex-1 py-3.5 px-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--border)]/40 font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors focus:outline-none"
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Back</span>
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={handleNextStep}
+                    className="flex-[2] py-3.5 px-5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[var(--primary)]/20 transition-all duration-150 active:scale-[0.99] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                  >
+                    <span>Continue</span>
+                    <ArrowRight size={16} />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* ================= STEP 3: CONTACT & PROFILE ================= */}
+            {step === 3 && (
+              <div className="space-y-5 animate-fade-in">
+                
+                {/* Profile Photo Placeholder */}
+                <div className="flex flex-col items-center justify-center py-2">
+                  <div className="w-20 h-20 rounded-full bg-[var(--surface-2)] border-2 border-dashed border-[var(--border)] hover:border-[var(--primary)] flex flex-col items-center justify-center text-[var(--muted)] hover:text-[var(--primary)] transition-all cursor-pointer group">
+                    <Camera size={22} className="group-hover:scale-105 transition-transform" />
+                    <span className="text-[10px] font-semibold mt-1">Photo</span>
+                  </div>
+                  <span className="text-xs text-[var(--muted)] mt-1.5">Optional profile avatar</span>
+                </div>
+
+                {/* Contact Number */}
+                <div>
+                  <label htmlFor="contact" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                    Contact Number
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--muted)]">
+                      <Phone size={18} />
+                    </div>
+                    <input 
+                      type="tel" 
+                      name="contact" 
+                      id="contact" 
+                      value={formData.contact} 
+                      onChange={handleChange} 
+                      placeholder="e.g. +91 98765 43210"
+                      className="w-full pl-10 pr-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] placeholder:text-[var(--muted)]/60 focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Residential / Permanent Address */}
+                <div>
+                  <label htmlFor="address" className="block text-xs font-semibold uppercase tracking-wider text-[var(--muted)] mb-1.5">
+                    Address
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[var(--muted)]">
+                      <MapPin size={18} />
+                    </div>
+                    <input 
+                      type="text" 
+                      name="address" 
+                      id="address" 
+                      value={formData.address} 
+                      onChange={handleChange} 
+                      placeholder="e.g. Dehradun, Uttarakhand"
+                      className="w-full pl-10 pr-4 py-3 bg-[var(--surface-2)] border border-[var(--border)] rounded-xl text-sm font-medium text-[var(--text)] placeholder:text-[var(--muted)]/60 focus:outline-none focus:border-[var(--primary)] focus:ring-2 focus:ring-[var(--primary)]/15 transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* Final Submission Navigation */}
+                <div className="flex items-center gap-3 pt-3">
+                  <button 
+                    type="button" 
+                    onClick={handleBackStep}
+                    className="flex-1 py-3.5 px-4 rounded-xl border border-[var(--border)] bg-[var(--surface-2)] text-[var(--text)] hover:bg-[var(--border)]/40 font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors focus:outline-none"
+                  >
+                    <ArrowLeft size={16} />
+                    <span>Back</span>
+                  </button>
+                  <button 
+                    type="submit" 
+                    disabled={isSubmitting}
+                    className="flex-[2] py-3.5 px-5 rounded-xl bg-[var(--primary)] hover:bg-[var(--primary-hover)] text-white font-semibold text-sm flex items-center justify-center gap-2 shadow-lg shadow-[var(--primary)]/25 transition-all duration-150 active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                  >
+                    {isSubmitting ? (
+                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <span>Create Account</span>
+                        <Check size={18} strokeWidth={2.5} />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+          </form>
+
+          {/* Bottom Prompt */}
+          <div className="mt-8 pt-6 border-t border-[var(--border)] text-center text-xs text-[var(--muted)]">
+            Already have an account?{' '}
+            <Link to="/login" className="font-semibold text-[var(--primary)] hover:underline">
+              Sign In
+            </Link>
+          </div>
+
+        </div>
+      </main>
+
+      {/* Simple Accessible Footer */}
+      <footer className="w-full text-center py-4 text-xs text-[var(--muted)] relative z-10">
+        &copy; {new Date().getFullYear()} QuizSphere. All rights reserved.
+      </footer>
+
+    </div>
   );
 };
-
-const InputField = ({ icon, type, name, label, value, onChange, focused, setFocused }) => (
-  <div className="relative group/input w-full">
-    <div className={`absolute -inset-0.5 rounded-xl blur opacity-0 group-focus-within/input:opacity-100 transition duration-500 bg-gradient-to-r from-indigo-500/40 to-cyan-500/40 ${focused === name ? 'opacity-100' : ''}`}></div>
-    <div className="relative flex items-center bg-[#1A1A1E] border border-white/10 rounded-xl overflow-hidden transition-all duration-300 focus-within:border-indigo-500/50">
-       <div className="pl-4 pr-2 text-slate-500 group-focus-within/input:text-indigo-400 transition-colors">
-         {icon}
-       </div>
-       <div className="flex-1 relative pt-2">
-         <input type={type} name={name} id={name} className="w-full bg-transparent text-slate-100 px-2 pt-4 pb-2 outline-none peer text-sm font-medium" value={value} onChange={onChange} onFocus={() => setFocused(name)} onBlur={() => setFocused('')} placeholder=" " />
-         <label htmlFor={name} className="absolute text-sm text-slate-500 duration-300 transform -translate-y-4 scale-75 top-4 z-10 origin-[0] left-2 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-4 peer-focus:text-indigo-400 pointer-events-none">
-           {label}
-         </label>
-       </div>
-    </div>
-  </div>
-);
-
-const SelectField = ({ label, name, value, onChange, options }) => (
-  <div className="relative w-full">
-    <label className="block text-xs font-bold text-slate-500 mb-1 ml-1 uppercase tracking-wider">{label}</label>
-    <select name={name} value={value} onChange={onChange} className="w-full bg-[#1A1A1E] border border-white/10 text-white rounded-xl px-4 py-3 outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all appearance-none shadow-inner text-sm font-medium">
-      <option value="" disabled>Select Mapping...</option>
-      {options.map((opt, i) => <option key={i} value={opt.val} className="bg-slate-900">{opt.tag}</option>)}
-    </select>
-  </div>
-);
 
 export default Register;

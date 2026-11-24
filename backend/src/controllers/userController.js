@@ -2,13 +2,51 @@ import User from '../models/User.js';
 import ExamSession from '../models/ExamSession.js';
 import bcrypt from 'bcryptjs';
 
+const ALLOWED_IMAGE_DATA_URL_REGEX = /^data:image\/(jpeg|jpg|png|webp);base64,([A-Za-z0-9+/=]+)$/;
+const ALLOWED_IMAGE_URL_REGEX = /^(https?:\/\/|\/uploads\/)/i;
+const MAX_PROFILE_IMAGE_BYTES = 2 * 1024 * 1024; // 2MB
+
+const validateProfileImage = (profileImage) => {
+  if (profileImage === '' || profileImage === null) return null;
+  if (typeof profileImage !== 'string') {
+    return 'Invalid profile image format.';
+  }
+
+  const trimmed = profileImage.trim();
+  if (trimmed === '') return null;
+
+  const dataUrlMatch = trimmed.match(ALLOWED_IMAGE_DATA_URL_REGEX);
+  if (dataUrlMatch) {
+    const base64Data = dataUrlMatch[2];
+    const padding = base64Data.endsWith('==') ? 2 : base64Data.endsWith('=') ? 1 : 0;
+    const byteSize = Math.floor((base64Data.length * 3) / 4) - padding;
+    if (byteSize > MAX_PROFILE_IMAGE_BYTES) {
+      return 'Profile image size must be less than 2MB.';
+    }
+    return null;
+  }
+
+  if (ALLOWED_IMAGE_URL_REGEX.test(trimmed)) {
+    return null;
+  }
+
+  return 'Unsupported image format. Please upload a JPG, JPEG, PNG, or WEBP image.';
+};
+
 export const updateProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user._id);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
+    if (req.body.profileImage !== undefined) {
+      const imageError = validateProfileImage(req.body.profileImage);
+      if (imageError) {
+        return res.status(400).json({ message: imageError });
+      }
+      user.profileImage = typeof req.body.profileImage === 'string' ? req.body.profileImage.trim() : '';
+    }
+
     user.name = req.body.name || user.name;
-    if (req.body.profileImage !== undefined) user.profileImage = req.body.profileImage;
     if (req.body.contactNumber !== undefined) user.contactNumber = req.body.contactNumber;
     if (req.body.dob !== undefined) user.dob = req.body.dob;
     if (req.body.address !== undefined) user.address = req.body.address;
@@ -49,7 +87,9 @@ export const updateProfile = async (req, res) => {
 
 export const getUsers = async (req, res) => {
   try {
-    const users = await User.find({ role: { $ne: 'admin' } }).populate('course', 'name');
+    const users = await User.find({ role: { $ne: 'admin' } })
+      .select('-password')
+      .populate('course', 'name');
     res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -122,7 +162,10 @@ export const createUserByAdmin = async (req, res) => {
       name, email, password: hashedPassword, role, course, universityCampus, branch, semester, section
     });
 
-    res.status(201).json(user);
+    const userObject = user.toObject();
+    delete userObject.password;
+
+    res.status(201).json(userObject);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

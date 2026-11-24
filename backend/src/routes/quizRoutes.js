@@ -17,7 +17,7 @@ router.route('/')
   .post(protect, authorize('examiner', 'admin'), createQuiz);
 
 router.route('/:id')
-  .get(getQuizById)
+  .get(protect, getQuizById)
   .put(protect, authorize('examiner', 'admin'), updateQuiz)
   .delete(protect, authorize('admin'), deleteQuiz);
 

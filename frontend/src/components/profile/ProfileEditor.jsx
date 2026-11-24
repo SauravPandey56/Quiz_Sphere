@@ -1,10 +1,13 @@
-import React, { useState, useContext, useRef } from 'react';
+import React, { useState, useContext, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { AuthContext } from '../../context/AuthContext';
 import { Save, UploadCloud, User as UserIcon } from 'lucide-react';
 
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE_BYTES = 2 * 1024 * 1024; // 2MB
+
 const ProfileEditor = () => {
-  const { user } = useContext(AuthContext);
+  const { user, updateUser } = useContext(AuthContext);
   const fileInputRef = useRef(null);
   
   const [formData, setFormData] = useState({ 
@@ -17,41 +20,73 @@ const ProfileEditor = () => {
     fatherName: user?.fatherName || ''
   });
   const [message, setMessage] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [imageLoadError, setImageLoadError] = useState(false);
+
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [formData.profileImage]);
 
   const handleImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
-        setMessage({ type: 'error', text: 'Image file size must be less than 2MB' });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData({ ...formData, profileImage: reader.result });
-      };
-      reader.readAsDataURL(file);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!ALLOWED_MIME_TYPES.includes(file.type.toLowerCase())) {
+      setMessage({ type: 'error', text: 'Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP.' });
+      e.target.value = '';
+      return;
     }
+
+    if (file.size > MAX_FILE_SIZE_BYTES) {
+      setMessage({ type: 'error', text: 'Image file size must be less than 2MB' });
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      if (typeof reader.result === 'string') {
+        setMessage('');
+        setImageLoadError(false);
+        setFormData((prev) => ({ ...prev, profileImage: reader.result }));
+      }
+    };
+    reader.onerror = () => {
+      setMessage({ type: 'error', text: 'Failed to read selected image file.' });
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setSaving(true);
+    setMessage('');
     try {
       const payload = { ...formData };
-      if(!payload.password) delete payload.password;
+      if (!payload.password) delete payload.password;
       
-      await axios.put('/api/users/profile', payload);
-      // Update local storage token if user data implies token generation occurred, but our PUT route only sends user details.
-      // We will reload to populate AuthContext naturally.
+      const { data } = await axios.put('/api/users/profile', payload);
+      updateUser(data);
+      setFormData({
+        name: data.name || '',
+        password: '',
+        profileImage: data.profileImage || '',
+        contactNumber: data.contactNumber || '',
+        dob: data.dob ? new Date(data.dob).toISOString().split('T')[0] : '',
+        address: data.address || '',
+        fatherName: data.fatherName || ''
+      });
       setMessage({ type: 'success', text: 'Profile & Credentials updated successfully!' });
-      setTimeout(() => window.location.reload(), 1000);
-    } catch(err) {
+    } catch (err) {
       setMessage({ type: 'error', text: err.response?.data?.message || 'Error updating profile' });
+    } finally {
+      setSaving(false);
     }
   };
 
   return (
-    <div className="glass-panel p-6 max-w-4xl mx-auto shadow-sm">
-      <h2 className="text-2xl font-bold mb-6 text-slate-800 border-b pb-3">Complete Your Profile</h2>
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-2xl p-6 max-w-4xl mx-auto shadow-[var(--shadow)] transition-colors duration-300">
+      <h2 className="text-2xl font-bold mb-6 text-[var(--text)] border-b border-[var(--border)] pb-3 font-heading">Complete Your Profile</h2>
       {message && (
         <div className={`p-4 rounded-lg mb-6 text-sm font-medium ${message.type==='success' ? 'bg-emerald-50 text-emerald-700 border-l-4 border-emerald-500' : 'bg-red-50 text-red-700 border-l-4 border-red-500'}`}>
           {message.text}
@@ -63,8 +98,8 @@ const ProfileEditor = () => {
          {/* Profile Photo Strategy */}
          <div className="flex flex-col items-center space-y-4 md:border-r md:border-slate-100 pr-4">
            <div className="w-32 h-32 rounded-full overflow-hidden bg-slate-100 border-4 border-indigo-50 shadow-md flex items-center justify-center relative group cursor-pointer" onClick={() => fileInputRef.current.click()}>
-              {formData.profileImage ? (
-                 <img src={formData.profileImage} alt="Profile Avatar" className="w-full h-full object-cover" />
+              {formData.profileImage && !imageLoadError ? (
+                 <img src={formData.profileImage} alt="Profile Avatar" className="w-full h-full object-cover" onError={() => setImageLoadError(true)} />
               ) : (
                  <UserIcon size={48} className="text-slate-300" />
               )}
@@ -72,10 +107,10 @@ const ProfileEditor = () => {
                  <UploadCloud className="text-white relative z-10" />
               </div>
            </div>
-           <input type="file" accept="image/*" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
+           <input type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" className="hidden" ref={fileInputRef} onChange={handleImageUpload} />
            <div className="text-center">
              <button type="button" onClick={() => fileInputRef.current.click()} className="text-sm font-bold text-indigo-600 hover:text-indigo-800">Upload New Photo</button>
-             <p className="text-xs text-slate-400 mt-1">JPEG, PNG under 2MB</p>
+             <p className="text-xs text-slate-400 mt-1">JPG, PNG, WEBP under 2MB</p>
            </div>
            
            <div className="w-full pt-6 mt-6 border-t border-slate-100 opacity-60 pointer-events-none">
@@ -117,8 +152,8 @@ const ProfileEditor = () => {
            </div>
 
            <div className="pt-4 flex justify-end">
-             <button type="submit" className="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl flex items-center justify-center transition-all shadow-md active:scale-95 font-bold">
-               <Save size={18} className="mr-2"/> Commit Parameters
+             <button type="submit" disabled={saving} className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed text-white px-8 py-3 rounded-xl flex items-center justify-center transition-all shadow-md active:scale-95 font-bold">
+               <Save size={18} className="mr-2"/> {saving ? 'Saving...' : 'Commit Parameters'}
              </button>
            </div>
          </div>
